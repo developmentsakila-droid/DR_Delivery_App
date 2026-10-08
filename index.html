@@ -442,19 +442,29 @@
         }
 
         // Helper method to bypass CORS preflight issues when calling Google Apps Script
-        async function postToApi(action, data) {
-            const body = new URLSearchParams();
-            body.append("payload", JSON.stringify({ action, data }));
+        // Updated postToApi with password protection
+async function postToApi(action, data) {
+    const password = prompt("Please enter the administrator password to proceed:");
+    if (password === null) return { status: "cancelled" }; // User clicked Cancel
 
-            const response = await fetch(API_URL, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/x-www-form-urlencoded"
-                },
-                body: body
-            });
-            return await response.json();
-        }
+    const body = new URLSearchParams();
+    body.append("payload", JSON.stringify({ action, data, password }));
+
+    const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: body
+    });
+
+    const result = await response.json();
+    if (result.status === "error") {
+        alert(result.message);
+        throw new Error(result.message);
+    }
+    return result;
+}
 
         // Fetch Data from Google Sheets API
         async function fetchDataFromGoogleSheets() {
