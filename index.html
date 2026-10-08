@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dreamron Warehouse - Delivery Location Finder</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            500: '#2563eb',
+                            600: '#1d4ed8',
+                            700: '#1e40af',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .btn-nav-mix {
+            background: linear-gradient(135deg, #15803d 0%, #334155 100%);
+            border: 1px solid #475569;
+            color: #ffffff;
+            transition: all 0.2s ease-in-out;
+        }
+        .btn-nav-mix:hover {
+            background: linear-gradient(135deg, #16a34a 0%, #475569 100%);
+            border-color: #64748b;
+            box-shadow: 0 4px 14px 0 rgba(22, 163, 74, 0.25);
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 dark:bg-black dark:text-slate-100 min-h-screen pb-24 transition-colors duration-200">
+
+    <!-- Loading Overlay for API Sync -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-2xl flex items-center gap-3 border border-slate-200 dark:border-slate-800">
+            <i class="fa-solid fa-spinner animate-spin text-brand-600 text-2xl"></i>
+            <span class="font-bold text-sm text-slate-800 dark:text-slate-100">Syncing with Google Sheets...</span>
+        </div>
+    </div>
+
+    <header class="sticky top-0 z-30 bg-white/90 dark:bg-slate-950/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 text-slate-900 dark:white shadow-sm">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-2">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-brand-600 flex items-center justify-center text-white font-black text-xl shadow-lg shadow-brand-600/30">
+                    <i class="fa-solid fa-truck-fast"></i>
+                </div>
+                <div>
+                    <h1 class="font-black text-base sm:text-lg leading-tight tracking-tight text-slate-900 dark:text-white">Dreamron Warehouse</h1>
+                    <p class="text-[11px] text-brand-600 dark:text-brand-400 font-semibold flex items-center gap-1.5">Develop By: Sakila Dilshan Perera</p>
+                    <p class="text-[11px] text-brand-600 dark:text-brand-400 font-semibold flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+                        Delivery Finder - Harumi Holdings (PVT) LTD
+                    </p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-1.5 sm:gap-2">
+                <button onclick="toggleTheme()" id="themeToggleBtn" title="Toggle Light/Dark Theme" class="p-2.5 rounded-xl bg-slate-200 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-amber-600 dark:text-amber-400 hover:scale-105 transition">
+                    <i class="fa-solid fa-sun text-base" id="themeIcon"></i>
+                </button>
+
+                <button onclick="openEmployeeModal()" class="bg-slate-200 dark:bg-slate-900 hover:bg-slate-300 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-200 font-bold px-3 py-2 rounded-xl text-xs sm:text-sm flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-users text-brand-600 dark:text-brand-400"></i>
+                    <span class="hidden md:inline">Employee Details</span>
+                </button>
+
+                <button onclick="openAddRouteModal()" class="bg-slate-200 dark:bg-slate-900 hover:bg-slate-300 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-200 font-bold px-3 py-2 rounded-xl text-xs sm:text-sm flex items-center gap-1.5 transition">
+                    <i class="fa-solid fa-folder-plus text-brand-600 dark:text-brand-400"></i>
+                    <span class="hidden sm:inline">Add Route</span>
+                </button>
+
+                <button onclick="openAddModal()" class="bg-brand-600 hover:bg-brand-700 active:scale-95 transition text-white font-extrabold px-3.5 py-2 rounded-xl text-xs sm:text-sm flex items-center gap-1.5 shadow-md">
+                    <i class="fa-solid fa-plus text-sm"></i>
+                    <span>Add Location</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 pt-5">
+
+        <!-- Stats Overview Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3.5 rounded-2xl flex items-center justify-between shadow-sm">
+                <div>
+                    <p class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Locations</p>
+                    <p id="statTotal" class="text-2xl font-black text-slate-900 dark:text-white mt-0.5">0</p>
+                </div>
+                <div class="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center text-base border border-blue-200 dark:border-blue-800/40">
+                    <i class="fa-solid fa-location-dot"></i>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3.5 rounded-2xl flex items-center justify-between shadow-sm">
+                <div>
+                    <p class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Active Routes</p>
+                    <p id="statRoutes" class="text-2xl font-black text-slate-900 dark:text-white mt-0.5">0</p>
+                </div>
+                <div class="w-9 h-9 rounded-xl bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-base border border-indigo-200 dark:border-indigo-800/40">
+                    <i class="fa-solid fa-route"></i>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3.5 rounded-2xl flex items-center justify-between shadow-sm">
+                <div>
+                    <p class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Agencies</p>
+                    <p id="statAgencies" class="text-2xl font-black text-slate-900 dark:text-white mt-0.5">0</p>
+                </div>
+                <div class="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400 flex items-center justify-center text-base border border-purple-200 dark:border-purple-800/40">
+                    <i class="fa-solid fa-building"></i>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3.5 rounded-2xl flex items-center justify-between shadow-sm">
+                <div>
+                    <p class="text-[10px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Direct Cust.</p>
+                    <p id="statDirect" class="text-2xl font-black text-slate-900 dark:text-white mt-0.5">0</p>
+                </div>
+                <div class="w-9 h-9 rounded-xl bg-teal-100 dark:bg-teal-900/40 text-teal-600 dark:text-teal-400 flex items-center justify-center text-base border border-teal-200 dark:border-teal-800/40">
+                    <i class="fa-solid fa-user-check"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search & Filters -->
+        <section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-md mb-5 space-y-4">
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-magnifying-glass text-lg"></i>
+                </div>
+                <input type="text" id="searchInput" oninput="applyFilters()" 
+                    placeholder="Search customer, phone, route, coordinates..." 
+                    class="w-full pl-11 pr-10 py-3 bg-slate-50 dark:bg-black border border-slate-300 dark:border-slate-800 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white font-medium">
+                <button id="clearSearch" onclick="clearSearchInput()" class="hidden absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <i class="fa-solid fa-circle-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2">
+                <button onclick="setCustomerTypeFilter('ALL')" id="typeBtn-ALL" class="type-btn py-2.5 px-3 rounded-xl font-bold text-xs text-center border transition flex items-center justify-center gap-1.5 bg-brand-600 text-white border-brand-500 shadow-sm">
+                    <i class="fa-solid fa-layer-group"></i> All Types
+                </button>
+                <button onclick="setCustomerTypeFilter('Agency')" id="typeBtn-Agency" class="type-btn py-2.5 px-3 rounded-xl font-bold text-xs text-center border transition flex items-center justify-center gap-1.5 bg-slate-100 dark:bg-black text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-800 hover:bg-slate-200 dark:hover:bg-slate-950">
+                    <i class="fa-solid fa-building"></i> Agency
+                </button>
+                <button onclick="setCustomerTypeFilter('Direct Customer')" id="typeBtn-Direct Customer" class="type-btn py-2.5 px-3 rounded-xl font-bold text-xs text-center border transition flex items-center justify-center gap-1.5 bg-slate-100 dark:bg-black text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-800 hover:bg-slate-200 dark:hover:bg-slate-950">
+                    <i class="fa-solid fa-user"></i> Direct
+                </button>
+            </div>
+
+            <div>
+                <div class="flex items-center justify-between mb-2">
+                    <label class="block text-[11px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        Select Delivery Route / Region
+                    </label>
+                    <button onclick="openAddRouteModal()" class="text-xs text-brand-600 dark:text-brand-400 hover:underline font-bold flex items-center gap-1">
+                        <i class="fa-solid fa-plus text-[10px]"></i> New Route
+                    </button>
+                </div>
+
+                <div class="flex items-center space-x-2 overflow-x-auto no-scrollbar pb-1" id="routeTabs"></div>
+            </div>
+
+            <div id="fullRouteBanner" class="bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 dark:from-slate-950 dark:via-slate-900 dark:to-black border border-slate-300 dark:border-slate-800 rounded-xl p-3.5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-xl shrink-0 border border-emerald-300 dark:border-emerald-800/50">
+                        <i class="fa-solid fa-map-location-dot"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-sm text-slate-900 dark:text-white" id="fullRouteTitle">Full Route GPS Navigation</h4>
+                        <p class="text-xs text-slate-600 dark:text-slate-400" id="fullRouteSub">Navigate all delivery points in selected route via Google Maps</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2 shrink-0">
+                    <button onclick="openMyMapModal()" class="px-3 py-2.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 border border-slate-300 dark:border-slate-700">
+                        <i class="fa-solid fa-map"></i> My Maps
+                    </button>
+
+                    <button id="openFullRouteBtn" onclick="launchFullRouteMap()" class="btn-nav-mix w-full sm:w-auto px-4 py-2.5 font-extrabold rounded-xl text-xs sm:text-sm flex items-center justify-center gap-2 active:scale-95 shadow-md">
+                        <i class="fa-solid fa-diamond-turn-right text-base text-emerald-300"></i>
+                        <span>Navigate Route Points</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3 px-1">
+            <div class="flex items-center gap-2">
+                <p class="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-400" id="resultCount">Showing 0 locations</p>
+            </div>
+
+            <div class="flex items-center gap-2 flex-wrap">
+                <button id="globalDetailsToggleBtn" onclick="toggleAllDetails()" class="text-xs font-extrabold text-brand-600 dark:text-brand-400 hover:underline bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm transition">
+                    <i class="fa-solid fa-eye" id="globalToggleIcon"></i>
+                    <span id="globalToggleText">Show All Details</span>
+                </button>
+
+                <button onclick="fetchDataFromGoogleSheets()" class="text-xs font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white underline flex items-center gap-1">
+                    <i class="fa-solid fa-rotate-right"></i> Refresh Sheet
+                </button>
+            </div>
+        </div>
+
+        <div id="customerGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+
+        <div id="emptyState" class="hidden text-center py-12 px-4 bg-white/60 dark:bg-slate-900/60 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800">
+            <div class="w-16 h-16 bg-slate-200 dark:bg-slate-800 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
+                <i class="fa-solid fa-map-pin"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-800 dark:text-white">No Locations Found</h3>
+            <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">No delivery points match your current filter or search criteria.</p>
+            <button onclick="resetAllFilters()" class="mt-4 bg-brand-600 hover:bg-brand-700 text-white text-xs sm:text-sm font-bold px-4 py-2.5 rounded-xl transition">
+                Clear Filters
+            </button>
+        </div>
+    </main>
+
+    <!-- Modal 1: Add / Edit Location -->
+    <div id="locationModal" class="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full max-h-[92vh] overflow-y-auto shadow-2xl text-slate-900 dark:text-slate-100">
+            <div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-5 py-4 flex items-center justify-between z-10">
+                <h3 id="modalTitle" class="font-bold text-slate-900 dark:text-white text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-location-dot text-brand-600 dark:text-brand-500"></i>
+                    Add Delivery Location
+                </h3>
+                <button onclick="closeModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-black text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form id="customerForm" onsubmit="handleFormSubmit(event)" class="p-5 space-y-4">
+                <input type="hidden" id="formId">
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Customer Category *</label>
+                        <select id="formType" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black border border-slate-300 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-brand-500">
+                            <option value="Direct Customer">Direct Customer</option>
+                            <option value="Agency">Agency / Sub-Agent</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Route / Region *</label>
+                        <select id="formRoute" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black border border-slate-300 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-brand-500"></select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Customer / Agency Name *</label>
+                    <input type="text" id="formName" required placeholder="e.g. Maharagama Pharmacy" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black border border-slate-300 dark:border-slate-800 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Customer Phone Number *</label>
+                    <input type="tel" id="formPhone" required placeholder="e.g. 077 123 4567" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black border border-slate-300 dark:border-slate-800 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white">
+                </div>
+
+                <div class="bg-slate-100 dark:bg-black p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <label class="text-xs font-bold text-brand-600 dark:text-brand-400 uppercase flex items-center gap-1.5">
+                            <i class="fa-solid fa-crosshairs text-brand-500"></i>
+                            GPS Location Coordinates *
+                        </label>
+                    </div>
+
+                    <div>
+                        <input type="text" id="formCoordsCombined" oninput="handleCombinedCoordsInput(this.value)" placeholder="Paste format: 6.84579, 79.92597" class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-0.5">Latitude</label>
+                            <input type="text" id="formLat" required placeholder="6.84579" oninput="syncCombinedCoords()" class="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-0.5">Longitude</label>
+                            <input type="text" id="formLng" required placeholder="79.92597" oninput="syncCombinedCoords()" class="w-full px-3 py-2 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Full Address *</label>
+                    <textarea id="formAddress" required rows="2" placeholder="No 12, High Level Road, Maharagama" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black border border-slate-300 dark:border-slate-800 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white"></textarea>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-100 dark:bg-slate-950 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">ASM</label>
+                        <select id="formAsm" class="w-full px-3 py-2 bg-white dark:bg-black border border-slate-300 dark:border-slate-800 rounded-lg text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"></select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Sales Ref</label>
+                        <select id="formSalesRef" class="w-full px-3 py-2 bg-white dark:bg-black border border-slate-300 dark:border-slate-800 rounded-lg text-xs font-medium text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500"></select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Driver Notes / Landmarks</label>
+                    <input type="text" id="formNotes" placeholder="Near clock tower / Call before unloading" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black border border-slate-300 dark:border-slate-800 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white">
+                </div>
+
+                <div class="pt-2 flex gap-3">
+                    <button type="button" onclick="closeModal()" class="w-1/2 py-3 border border-slate-300 dark:border-slate-800 rounded-xl font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">Cancel</button>
+                    <button type="submit" class="w-1/2 py-3 bg-brand-600 hover:bg-brand-700 text-white font-extrabold rounded-xl shadow-md transition">Save Location</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 2: Add Route -->
+    <div id="routeModal" class="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full shadow-2xl text-slate-900 dark:text-slate-100 p-5">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-4">
+                <h3 class="font-bold text-slate-900 dark:text-white text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-folder-plus text-brand-600 dark:text-brand-500"></i>
+                    Add New Route / Region
+                </h3>
+                <button onclick="closeRouteModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-black text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form onsubmit="handleRouteFormSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Route Name *</label>
+                    <input type="text" id="newRouteInput" required placeholder="e.g. Matara, Negombo" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black border border-slate-300 dark:border-slate-800 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Google My Maps Embed URL (Optional)</label>
+                    <input type="url" id="newRouteMapUrl" placeholder="https://www.google.com/maps/d/embed?mid=..." class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black border border-slate-300 dark:border-slate-800 rounded-xl font-mono text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-900 dark:text-white">
+                </div>
+
+                <div class="pt-2 flex gap-3">
+                    <button type="button" onclick="closeRouteModal()" class="w-1/2 py-3 border border-slate-300 dark:border-slate-800 rounded-xl font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">Cancel</button>
+                    <button type="submit" class="w-1/2 py-3 bg-brand-600 hover:bg-brand-700 text-white font-extrabold rounded-xl shadow-md transition">Add Route</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 3: Employee Team Management -->
+    <div id="employeeModal" class="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto shadow-2xl text-slate-900 dark:text-slate-100 p-5">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-4">
+                <h3 class="font-bold text-slate-900 dark:text-white text-lg flex items-center gap-2">
+                    <i class="fa-solid fa-users text-brand-600 dark:text-brand-500"></i>
+                    Employee Details
+                </h3>
+                <button onclick="closeEmployeeModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-black text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form onsubmit="handleAddEmployee(event)" class="bg-slate-100 dark:bg-black p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 mb-4 space-y-3">
+                <h4 class="text-xs font-bold text-brand-600 dark:text-brand-400 uppercase">Add Team Member</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <select id="empRoleInput" required class="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg text-xs font-bold text-slate-900 dark:text-white">
+                        <option value="ASM">ASM (Area Sales Mgr)</option>
+                        <option value="Sales Ref">Sales Ref / Rep</option>
+                        <option value="Driver">Warehouse Assistant</option>
+                    </select>
+                    <input type="text" id="empNameInput" required placeholder="Full Name" class="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg text-xs font-medium text-slate-900 dark:text-white">
+                    <input type="tel" id="empPhoneInput" required placeholder="Phone Number" class="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-lg text-xs font-medium text-slate-900 dark:text-white">
+                </div>
+                <button type="submit" class="w-full py-2 bg-slate-800 dark:bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-lg transition">+ Add Employee</button>
+            </form>
+
+            <div class="space-y-2" id="employeeList"></div>
+        </div>
+    </div>
+
+    <!-- Modal 4: Google My Maps Embed Viewer -->
+    <div id="myMapModal" class="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-4xl w-full h-[85vh] flex flex-col shadow-2xl text-slate-900 dark:text-slate-100 overflow-hidden">
+            <div class="px-5 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0">
+                <h3 class="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2">
+                    <i class="fa-solid fa-map text-brand-600 dark:text-brand-500"></i>
+                    Interactive My Maps View
+                </h3>
+                <button onclick="closeMyMapModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-black text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="grow relative w-full h-full bg-slate-100 dark:bg-black" id="mapIframeContainer"></div>
+        </div>
+    </div>
+
+    <!-- JavaScript Core Integration with Google Apps Script Backend -->
+    <script>
+        // ⚠️ REPLACE THIS URL WITH YOUR PUBLISHED GOOGLE APPS SCRIPT WEB APP URL ⚠️
+        const API_URL = "https://script.google.com/macros/s/AKfycbyh4iQkckp8B0K9tjqlzSkdha5HkH2dPBs3gLXV-PEwEVhEwOz-v88VNPq51S4OkCxa/exec";
+
+        // Global State variables
+        let locations = [];
+        let routes = [{ name: "ALL", mapUrl: "" }];
+        let employees = [];
+
+        let activeRoute = "ALL";
+        let activeType = "ALL";
+        let expandedCards = new Set();
+        let allExpanded = false;
+
+        // Initialize App
+        document.addEventListener("DOMContentLoaded", () => {
+            initTheme();
+            fetchDataFromGoogleSheets();
+        });
+
+        // Toggle Loading Spinner Overlay
+        function showLoading(show) {
+            document.getElementById('loadingOverlay').classList.toggle('hidden', !show);
+        }
+
+        // Helper method to bypass CORS preflight issues when calling Google Apps Script
+        async function postToApi(action, data) {
+            const body = new URLSearchParams();
+            body.append("payload", JSON.stringify({ action, data }));
+
+            const response = await fetch(API_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded"
+                },
+                body: body
+            });
+            return await response.json();
+        }
+
+        // Fetch Data from Google Sheets API
+        async function fetchDataFromGoogleSheets() {
+            if (API_URL.includes("YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE")) {
+                alert("Please set your Google Apps Script Web App URL in the JavaScript API_URL variable.");
+                return;
+            }
+
+            showLoading(true);
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+                
+                locations = data.locations || [];
+                routes = [{ name: "ALL", mapUrl: "" }, ...(data.routes || [])];
+                employees = data.employees || [];
+
+                renderRouteTabs();
+                renderEmployeeDropdowns();
+                applyFilters();
+            } catch (error) {
+                console.error("Error fetching data from Google Sheets:", error);
+                alert("Failed to load data from Google Sheets API.");
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Theme Toggle Handler
+        function initTheme() {
+            if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+                document.getElementById('themeIcon').className = 'fa-solid fa-moon text-base';
+            } else {
+                document.documentElement.classList.remove('dark');
+                document.getElementById('themeIcon').className = 'fa-solid fa-sun text-base';
+            }
+        }
+
+        function toggleTheme() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.theme = 'light';
+                document.getElementById('themeIcon').className = 'fa-solid fa-sun text-base';
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.theme = 'dark';
+                document.getElementById('themeIcon').className = 'fa-solid fa-moon text-base';
+            }
+        }
+
+        // Filter Logic
+        function setCustomerTypeFilter(type) {
+            activeType = type;
+            document.querySelectorAll('.type-btn').forEach(btn => {
+                btn.className = "type-btn py-2.5 px-3 rounded-xl font-bold text-xs text-center border transition flex items-center justify-center gap-1.5 bg-slate-100 dark:bg-black text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-800 hover:bg-slate-200 dark:hover:bg-slate-950";
+            });
+            const activeBtn = document.getElementById(`typeBtn-${type}`);
+            if (activeBtn) {
+                activeBtn.className = "type-btn py-2.5 px-3 rounded-xl font-bold text-xs text-center border transition flex items-center justify-center gap-1.5 bg-brand-600 text-white border-brand-500 shadow-sm";
+            }
+            applyFilters();
+        }
+
+        function selectRoute(routeName) {
+            activeRoute = routeName;
+            renderRouteTabs();
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            document.getElementById('clearSearch').classList.toggle('hidden', query === '');
+
+            const filtered = locations.filter(loc => {
+                const matchesRoute = activeRoute === 'ALL' || loc.route === activeRoute;
+                const matchesType = activeType === 'ALL' || loc.type === activeType;
+                
+                const combinedSearchStr = `${loc.name} ${loc.phone} ${loc.address} ${loc.route} ${loc.lat},${loc.lng} ${loc.asm} ${loc.salesRef}`.toLowerCase();
+                const matchesSearch = query === '' || combinedSearchStr.includes(query);
+
+                return matchesRoute && matchesType && matchesSearch;
+            });
+
+            renderGrid(filtered);
+            updateStats();
+        }
+
+        function clearSearchInput() {
+            document.getElementById('searchInput').value = '';
+            applyFilters();
+        }
+
+        function resetAllFilters() {
+            document.getElementById('searchInput').value = '';
+            activeRoute = 'ALL';
+            activeType = 'ALL';
+            setCustomerTypeFilter('ALL');
+            renderRouteTabs();
+            applyFilters();
+        }
+
+        // Render UI Elements
+        function renderRouteTabs() {
+            const container = document.getElementById('routeTabs');
+            container.innerHTML = routes.map(r => {
+                const isActive = r.name === activeRoute;
+                const count = r.name === 'ALL' ? locations.length : locations.filter(l => l.route === r.name).length;
+                return `
+                    <button onclick="selectRoute('${r.name}')" class="px-3.5 py-2 rounded-xl font-bold text-xs shrink-0 flex items-center gap-1.5 border transition ${isActive ? 'bg-slate-900 text-white border-slate-800 dark:bg-white dark:text-black dark:border-white shadow-sm' : 'bg-slate-100 dark:bg-black text-slate-600 dark:text-slate-400 border-slate-300 dark:border-slate-800 hover:bg-slate-200 dark:hover:bg-slate-900'}">
+                        <span>${r.name === 'ALL' ? 'All Routes' : r.name}</span>
+                        <span class="text-[10px] px-1.5 py-0.2 rounded-full ${isActive ? 'bg-brand-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'}">${count}</span>
+                    </button>
+                `;
+            }).join('');
+
+            document.getElementById('fullRouteTitle').textContent = activeRoute === 'ALL' ? 'Full Route GPS Navigation' : `${activeRoute} Route Navigation`;
+        }
+
+        function renderGrid(data) {
+            const grid = document.getElementById('customerGrid');
+            const empty = document.getElementById('emptyState');
+            document.getElementById('resultCount').textContent = `Showing ${data.length} location${data.length === 1 ? '' : 's'}`;
+
+            if (data.length === 0) {
+                grid.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+            grid.innerHTML = data.map(item => {
+                const isExpanded = expandedCards.has(item.id) || allExpanded;
+                const mapSingleUrl = `https://www.google.com/maps/search/?api=1&query=${item.lat},${item.lng}`;
+
+                return `
+                    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-start justify-between gap-2 mb-2">
+                                <div>
+                                    <span class="inline-block text-[10px] font-black px-2 py-0.5 rounded-md ${item.type === 'Agency' ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300' : 'bg-teal-100 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300'} mb-1">
+                                        ${item.type}
+                                    </span>
+                                    <h3 class="font-extrabold text-base text-slate-900 dark:text-white leading-snug">${item.name}</h3>
+                                </div>
+                                <span class="text-xs font-bold px-2 py-1 bg-slate-100 dark:bg-black border border-slate-200 dark:border-slate-800 rounded-lg shrink-0">
+                                    <i class="fa-solid fa-route text-brand-500 mr-1"></i>${item.route}
+                                </span>
+                            </div>
+
+                            <p class="text-xs text-slate-600 dark:text-slate-400 font-medium mb-3 flex items-start gap-1.5">
+                                <i class="fa-solid fa-location-dot text-rose-500 mt-0.5"></i>
+                                <span>${item.address}</span>
+                            </p>
+
+                            <div class="${isExpanded ? 'block' : 'hidden'} space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800/80 mb-3 text-xs">
+                                <div class="grid grid-cols-2 gap-2 bg-slate-50 dark:bg-black/50 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60">
+                                    <div>
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Phone</p>
+                                        <a href="tel:${item.phone}" class="font-bold text-brand-600 dark:text-brand-400 hover:underline">${item.phone}</a>
+                                    </div>
+                                    <div>
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">GPS Coords</p>
+                                        <p class="font-mono text-slate-700 dark:text-slate-300">${item.lat}, ${item.lng}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">ASM</p>
+                                        <p class="font-semibold text-slate-800 dark:text-slate-200">${item.asm || 'Unassigned'}</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-[10px] font-bold text-slate-400 uppercase">Sales Ref</p>
+                                        <p class="font-semibold text-slate-800 dark:text-slate-200">${item.salesRef || 'Unassigned'}</p>
+                                    </div>
+                                </div>
+                                ${item.notes ? `<p class="text-slate-500 dark:text-slate-400 italic bg-amber-50 dark:bg-amber-950/20 p-2 rounded-lg border border-amber-200/50 dark:border-amber-800/30"><strong class="not-italic text-amber-600 dark:text-amber-400">Note:</strong> ${item.notes}</p>` : ''}
+                            </div>
+                        </div>
+
+                        <div class="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                            <button onclick="toggleCard('${item.id}')" class="text-xs font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white flex items-center gap-1">
+                                <i class="fa-solid ${isExpanded ? 'fa-chevron-up' : 'fa-chevron-down'}"></i>
+                                <span>${isExpanded ? 'Hide Details' : 'View Details'}</span>
+                            </button>
+
+                            <div class="flex items-center gap-1.5">
+                                <button onclick="openEditModal('${item.id}')" title="Edit Location" class="p-2 rounded-lg bg-slate-100 dark:bg-black hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs">
+                                    <i class="fa-solid fa-pen-to-square"></i>
+                                </button>
+                                <button onclick="deleteLocation('${item.id}')" title="Delete Location" class="p-2 rounded-lg bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-400 text-xs">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                                <a href="${mapSingleUrl}" target="_blank" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 shadow-sm">
+                                    <i class="fa-solid fa-diamond-turn-right"></i> Navigate
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function toggleCard(id) {
+            if (expandedCards.has(id)) {
+                expandedCards.delete(id);
+            } else {
+                expandedCards.add(id);
+            }
+            applyFilters();
+        }
+
+        function toggleAllDetails() {
+            allExpanded = !allExpanded;
+            const btnText = document.getElementById('globalToggleText');
+            const btnIcon = document.getElementById('globalToggleIcon');
+
+            if (allExpanded) {
+                btnText.textContent = "Hide All Details";
+                btnIcon.className = "fa-solid fa-eye-slash";
+            } else {
+                btnText.textContent = "Show All Details";
+                btnIcon.className = "fa-solid fa-eye";
+                expandedCards.clear();
+            }
+            applyFilters();
+        }
+
+        function updateStats() {
+            document.getElementById('statTotal').textContent = locations.length;
+            document.getElementById('statRoutes').textContent = routes.length - 1;
+            document.getElementById('statAgencies').textContent = locations.filter(l => l.type === 'Agency').length;
+            document.getElementById('statDirect').textContent = locations.filter(l => l.type === 'Direct Customer').length;
+        }
+
+        // GPS Parsing
+        function handleCombinedCoordsInput(val) {
+            if (!val.trim()) return;
+            const parts = val.split(/[\s,]+/);
+            if (parts.length >= 2) {
+                const lat = parseFloat(parts[0]);
+                const lng = parseFloat(parts[1]);
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    document.getElementById('formLat').value = lat;
+                    document.getElementById('formLng').value = lng;
+                }
+            }
+        }
+
+        function syncCombinedCoords() {
+            const lat = document.getElementById('formLat').value.trim();
+            const lng = document.getElementById('formLng').value.trim();
+            if (lat && lng) {
+                document.getElementById('formCoordsCombined').value = `${lat}, ${lng}`;
+            }
+        }
+
+        function launchFullRouteMap() {
+            const activeList = activeRoute === 'ALL' ? locations : locations.filter(l => l.route === activeRoute);
+            if (activeList.length === 0) {
+                alert("No locations found for this route.");
+                return;
+            }
+            const origin = `${activeList[0].lat},${activeList[0].lng}`;
+            const destination = `${activeList[activeList.length - 1].lat},${activeList[activeList.length - 1].lng}`;
+            const waypoints = activeList.slice(1, -1).map(l => `${l.lat},${l.lng}`).join('|');
+
+            let mapUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}`;
+            if (waypoints) {
+                mapUrl += `&waypoints=${waypoints}`;
+            }
+            window.open(mapUrl, '_blank');
+        }
+
+        // Modal Controls & Handlers with API Sync
+        function openAddModal() {
+            document.getElementById('modalTitle').innerHTML = `<i class="fa-solid fa-location-dot text-brand-600"></i> Add Delivery Location`;
+            document.getElementById('customerForm').reset();
+            document.getElementById('formId').value = '';
+            document.getElementById('locationModal').classList.remove('hidden');
+        }
+
+        function openEditModal(id) {
+            const loc = locations.find(l => String(l.id) === String(id));
+            if (!loc) return;
+
+            document.getElementById('modalTitle').innerHTML = `<i class="fa-solid fa-pen-to-square text-brand-600"></i> Edit Delivery Location`;
+            document.getElementById('formId').value = loc.id;
+            document.getElementById('formType').value = loc.type;
+            document.getElementById('formRoute').value = loc.route;
+            document.getElementById('formName').value = loc.name;
+            document.getElementById('formPhone').value = loc.phone;
+            document.getElementById('formLat').value = loc.lat;
+            document.getElementById('formLng').value = loc.lng;
+            document.getElementById('formCoordsCombined').value = `${loc.lat}, ${loc.lng}`;
+            document.getElementById('formAddress').value = loc.address;
+            document.getElementById('formAsm').value = loc.asm || '';
+            document.getElementById('formSalesRef').value = loc.salesRef || '';
+            document.getElementById('formNotes').value = loc.notes || '';
+
+            document.getElementById('locationModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('locationModal').classList.add('hidden');
+        }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            const id = document.getElementById('formId').value || `loc-${Date.now()}`;
+            const newLoc = {
+                id: id,
+                type: document.getElementById('formType').value,
+                route: document.getElementById('formRoute').value,
+                name: document.getElementById('formName').value.trim(),
+                phone: document.getElementById('formPhone').value.trim(),
+                lat: document.getElementById('formLat').value.trim(),
+                lng: document.getElementById('formLng').value.trim(),
+                address: document.getElementById('formAddress').value.trim(),
+                asm: document.getElementById('formAsm').value,
+                salesRef: document.getElementById('formSalesRef').value,
+                notes: document.getElementById('formNotes').value.trim()
+            };
+
+            showLoading(true);
+            try {
+                await postToApi("saveLocation", newLoc);
+                closeModal();
+                await fetchDataFromGoogleSheets();
+            } catch (err) {
+                alert("Failed to save location to Google Sheets.");
+                showLoading(false);
+            }
+        }
+
+        async function deleteLocation(id) {
+            if (confirm("Are you sure you want to delete this delivery location?")) {
+                showLoading(true);
+                try {
+                    await postToApi("deleteLocation", { id: id });
+                    await fetchDataFromGoogleSheets();
+                } catch (err) {
+                    alert("Failed to delete location.");
+                    showLoading(false);
+                }
+            }
+        }
+
+        // Route Management Handlers
+        function openAddRouteModal() {
+            document.getElementById('newRouteInput').value = '';
+            document.getElementById('newRouteMapUrl').value = '';
+            document.getElementById('routeModal').classList.remove('hidden');
+        }
+
+        function closeRouteModal() {
+            document.getElementById('routeModal').classList.add('hidden');
+        }
+
+        async function handleRouteFormSubmit(e) {
+            e.preventDefault();
+            const name = document.getElementById('newRouteInput').value.trim();
+            const mapUrl = document.getElementById('newRouteMapUrl').value.trim();
+
+            if (name) {
+                showLoading(true);
+                try {
+                    await postToApi("saveRoute", { name, mapUrl });
+                    closeRouteModal();
+                    await fetchDataFromGoogleSheets();
+                } catch (err) {
+                    alert("Failed to save route.");
+                    showLoading(false);
+                }
+            }
+        }
+
+        // Employee Management Handlers
+        function openEmployeeModal() {
+            renderEmployeeList();
+            document.getElementById('employeeModal').classList.remove('hidden');
+        }
+
+        function closeEmployeeModal() {
+            document.getElementById('employeeModal').classList.add('hidden');
+        }
+
+        async function handleAddEmployee(e) {
+            e.preventDefault();
+            const role = document.getElementById('empRoleInput').value;
+            const name = document.getElementById('empNameInput').value.trim();
+            const phone = document.getElementById('empPhoneInput').value.trim();
+
+            if (name && phone) {
+                const newEmp = { id: `emp-${Date.now()}`, role, name, phone };
+                showLoading(true);
+                try {
+                    await postToApi("saveEmployee", newEmp);
+                    document.getElementById('empNameInput').value = '';
+                    document.getElementById('empPhoneInput').value = '';
+                    await fetchDataFromGoogleSheets();
+                    renderEmployeeList();
+                } catch (err) {
+                    alert("Failed to add employee.");
+                    showLoading(false);
+                }
+            }
+        }
+
+        async function deleteEmployee(id) {
+            showLoading(true);
+            try {
+                await postToApi("deleteEmployee", { id: id });
+                await fetchDataFromGoogleSheets();
+                renderEmployeeList();
+            } catch (err) {
+                alert("Failed to delete employee.");
+                showLoading(false);
+            }
+        }
+
+        function renderEmployeeList() {
+            const container = document.getElementById('employeeList');
+            container.innerHTML = employees.map(emp => `
+                <div class="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-black rounded-xl border border-slate-200 dark:border-slate-800">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-md ${emp.role === 'ASM' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300' : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300'}">
+                            ${emp.role}
+                        </span>
+                        <div>
+                            <p class="text-xs font-bold text-slate-900 dark:text-white">${emp.name}</p>
+                            <p class="text-[10px] text-slate-500 dark:text-slate-400">${emp.phone}</p>
+                        </div>
+                    </div>
+                    <button onclick="deleteEmployee('${emp.id}')" class="text-rose-500 hover:text-rose-700 text-xs p-1">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function renderEmployeeDropdowns() {
+            const formRouteSelect = document.getElementById('formRoute');
+            const asmSelect = document.getElementById('formAsm');
+            const salesRefSelect = document.getElementById('formSalesRef');
+
+            formRouteSelect.innerHTML = routes
+                .filter(r => r.name !== 'ALL')
+                .map(r => `<option value="${r.name}">${r.name}</option>`).join('');
+
+            const asms = employees.filter(e => e.role === 'ASM');
+            asmSelect.innerHTML = `<option value="">Unassigned</option>` + 
+                asms.map(e => `<option value="${e.name}">${e.name}</option>`).join('');
+
+            const salesRefs = employees.filter(e => e.role === 'Sales Ref');
+            salesRefSelect.innerHTML = `<option value="">Unassigned</option>` + 
+                salesRefs.map(e => `<option value="${e.name}">${e.name}</option>`).join('');
+        }
+
+        // My Maps Embed View
+        function openMyMapModal() {
+            const container = document.getElementById('mapIframeContainer');
+            const routeObj = routes.find(r => r.name === activeRoute && r.mapUrl);
+
+            if (routeObj && routeObj.mapUrl) {
+                container.innerHTML = `<iframe src="${routeObj.mapUrl}" class="w-full h-full border-0"></iframe>`;
+            } else {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full p-6 text-center">
+                        <i class="fa-solid fa-map-location-dot text-4xl text-slate-300 dark:text-slate-700 mb-3"></i>
+                        <p class="text-sm font-bold text-slate-700 dark:text-slate-300">No Custom Map Linked for "${activeRoute}"</p>
+                        <p class="text-xs text-slate-500 max-w-sm mt-1">Attach a Google My Maps embed link when adding or editing routes.</p>
+                    </div>
+                `;
+            }
+            document.getElementById('myMapModal').classList.remove('hidden');
+        }
+
+        function closeMyMapModal() {
+            document.getElementById('myMapModal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
