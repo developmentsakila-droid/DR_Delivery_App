@@ -712,13 +712,13 @@ async function postToApi(action, data) {
             applyFilters();
         }
 
-        function updateStats() {
+ /*      function updateStats() {
             document.getElementById('statTotal').textContent = locations.length;
             document.getElementById('statRoutes').textContent = routes.length - 1;
             document.getElementById('statAgencies').textContent = locations.filter(l => l.type === 'Agency').length;
             document.getElementById('statDirect').textContent = locations.filter(l => l.type === 'Direct Customer').length;
              document.getElementById('statMT').textContent = locations.filter(l => l.type === 'Modern Trade').length;
-        }
+        } */
 
         // GPS Parsing
         function handleCombinedCoordsInput(val) {
