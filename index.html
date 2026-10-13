@@ -79,6 +79,15 @@
                     </p>
                 </div>
             </div>
+
+
+            
+            <button onclick="openQADefectModal()" class="bg-amber-600 hover:bg-amber-700 active:scale-95 transition text-white font-extrabold px-3.5 py-2 rounded-xl text-xs sm:text-sm flex items-center gap-1.5 shadow-md">
+    <i class="fa-solid fa-triangle-exclamation text-sm"></i>
+    <span>QA Defect</span>
+</button>
+
+
             
             <div class="flex items-center gap-1.5 sm:gap-2">
                 <button onclick="toggleTheme()" id="themeToggleBtn" title="Toggle Light/Dark Theme" class="p-2.5 rounded-xl bg-slate-200 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 text-amber-600 dark:text-amber-400 hover:scale-105 transition">
@@ -434,6 +443,77 @@
         </div>
     </div>
 
+
+
+<!-- Moda6: Add QA Defect------------------------------------ -->
+<div id="qaDefectModal" class="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-lg w-full max-h-[92vh] overflow-y-auto shadow-2xl text-slate-900 dark:text-slate-100">
+        <div class="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-5 py-4 flex items-center justify-between z-10">
+            <h3 class="font-bold text-slate-900 dark:text-white text-lg flex items-center gap-2">
+                <i class="fa-solid fa-triangle-exclamation text-amber-600"></i>
+                Log Quality Defect
+            </h3>
+            <button onclick="closeQADefectModal()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-black text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form id="qaDefectForm" onsubmit="handleQADefectSubmit(event)" class="p-5 space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Item Code / Barcode *</label>
+                <input type="text" id="qaItemCode" required placeholder="Scan or type item code/barcode" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black border border-slate-300 dark:border-slate-800 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 text-slate-900 dark:text-white">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Item Name *</label>
+                <input type="text" id="qaItemName" required placeholder="e.g. Dreamron Hair Cream 100ml" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black border border-slate-300 dark:border-slate-800 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 text-slate-900 dark:text-white">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Defect Category *</label>
+                    <select id="qaCategory" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black border border-slate-300 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-amber-500">
+                        <option value="Packaging Damage">Packaging Damage</option>
+                        <option value="Leakage / Spillage">Leakage / Spillage</option>
+                        <option value="Labeling Error">Labeling Error</option>
+                        <option value="Expired / Near Expiry">Expired / Near Expiry</option>
+                        <option value="Manufacturing Defect">Manufacturing Defect</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Severity Level *</label>
+                    <select id="qaSeverity" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black border border-slate-300 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white font-medium focus:outline-none focus:ring-2 focus:ring-amber-500">
+                        <option value="Low">Low</option>
+                        <option value="Medium" selected>Medium</option>
+                        <option value="High">High</option>
+                        <option value="Critical">Critical</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Quantity Affected *</label>
+                <input type="number" id="qaQuantity" min="1" value="1" required class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black border border-slate-300 dark:border-slate-800 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 text-slate-900 dark:text-white">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Defect Description / Notes</label>
+                <textarea id="qaNotes" rows="3" placeholder="Provide details regarding the defect..." class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-black border border-slate-300 dark:border-slate-800 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 text-slate-900 dark:text-white"></textarea>
+            </div>
+
+            <div class="pt-2 flex gap-3">
+                <button type="button" onclick="closeQADefectModal()" class="w-1/2 py-3 border border-slate-300 dark:border-slate-800 rounded-xl font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition">Cancel</button>
+                <button type="submit" class="w-1/2 py-3 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-xl shadow-md transition">Submit Defect</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+    
+    
     <!-- JavaScript Core Integration with Google Apps Script Backend -->
     <script>
         // ⚠️ REPLACE THIS URL WITH YOUR PUBLISHED GOOGLE APPS SCRIPT WEB APP URL ⚠️
@@ -512,6 +592,45 @@ async function postToApi(action, data) {
             }
         }
 
+
+        
+function openQADefectModal() {
+    document.getElementById('qaDefectForm').reset();
+    document.getElementById('qaDefectModal').classList.remove('hidden');
+}
+
+function closeQADefectModal() {
+    document.getElementById('qaDefectModal').classList.add('hidden');
+}
+
+async function handleQADefectSubmit(e) {
+    e.preventDefault();
+    
+    const defectData = {
+        itemCode: document.getElementById('qaItemCode').value.trim(),
+        itemName: document.getElementById('qaItemName').value.trim(),
+        category: document.getElementById('qaCategory').value,
+        severity: document.getElementById('qaSeverity').value,
+        quantity: document.getElementById('qaQuantity').value,
+        notes: document.getElementById('qaNotes').value.trim()
+    };
+
+    showLoading(true);
+    try {
+        const result = await postToApi("saveQADefect", defectData);
+        if (result.status === "success") {
+            alert("QA Defect logged successfully!");
+            closeQADefectModal();
+        }
+    } catch (err) {
+        console.error("Error saving QA defect:", err);
+    } finally {
+        showLoading(false);
+    }
+}
+
+
+        
         // Theme Toggle Handler
         function initTheme() {
             if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
