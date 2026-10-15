@@ -35,13 +35,6 @@
             font-family: 'Inter', sans-serif;
             -webkit-tap-highlight-color: transparent;
         }
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
         .btn-nav-mix {
             background: linear-gradient(135deg, #059669 0%, #1e293b 100%);
             border: 1px solid #34d399;
@@ -153,7 +146,7 @@
                 </button>
             </div>
 
-            <!-- Route Tabs -->
+            <!-- Route Buttons (Wrapped Layout so all buttons are fully visible without dragging) -->
             <div>
                 <div class="flex items-center justify-between mb-2 px-1">
                     <label class="block text-[11px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
@@ -163,7 +156,7 @@
                         <i class="fa-solid fa-plus text-[10px]"></i> New Route
                     </button>
                 </div>
-                <div class="flex items-center space-x-2 overflow-x-auto no-scrollbar pb-1" id="routeTabs"></div>
+                <div class="flex flex-wrap gap-2 pt-1" id="routeTabs"></div>
             </div>
 
             <!-- Route Action Banner -->
@@ -544,7 +537,7 @@
                 const isActive = r.name === activeRoute;
                 const count = r.name === 'ALL' ? locations.length : locations.filter(l => l.route === r.name).length;
                 return `
-                    <button onclick="selectRoute('${r.name}')" class="px-4 py-2.5 rounded-2xl font-bold text-xs shrink-0 flex items-center gap-2 border transition ${isActive ? 'bg-slate-900 text-white border-slate-900 dark:bg-emerald-600 dark:text-white dark:border-emerald-500 shadow-md' : 'bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'}">
+                    <button onclick="selectRoute('${r.name}')" class="px-3.5 py-2 rounded-2xl font-bold text-xs flex items-center gap-1.5 border transition ${isActive ? 'bg-slate-900 text-white border-slate-900 dark:bg-emerald-600 dark:text-white dark:border-emerald-500 shadow-md' : 'bg-white dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900'}">
                         <span>${r.name === 'ALL' ? 'All Routes' : r.name}</span>
                         <span class="text-[10px] px-2 py-0.5 rounded-xl ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-900 text-slate-700 dark:text-slate-300'}">${count}</span>
                     </button>
@@ -884,16 +877,29 @@
 
         function openMyMapModal() {
             const container = document.getElementById('mapIframeContainer');
-            const routeObj = routes.find(r => r.name === activeRoute && r.mapUrl);
+            const routeObj = routes.find(r => r.name === activeRoute);
 
             if (routeObj && routeObj.mapUrl) {
+                // If a custom embed URL is provided for this route
                 container.innerHTML = `<iframe src="${routeObj.mapUrl}" class="w-full h-full border-0"></iframe>`;
             } else {
+                // Fallback: Generate an interactive Google Maps search query view centered on the route locations
+                const activeList = activeRoute === 'ALL' ? locations : locations.filter(l => l.route === activeRoute);
+                let searchQuery = activeRoute === 'ALL' ? "Sri Lanka Delivery Locations" : `${activeRoute} Route Sri Lanka`;
+                
+                if (activeList.length > 0 && activeRoute !== 'ALL') {
+                    searchQuery = activeList[0].address;
+                }
+
+                const embedFallbackUrl = `https://maps.google.com/maps?q=${encodeURIComponent(searchQuery)}&t=&z=13&ie=UTF8&iwloc=&output=embed`;
+                
                 container.innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-full p-6 text-center">
-                        <i class="fa-solid fa-map-location-dot text-4xl text-slate-300 dark:text-slate-700 mb-3"></i>
-                        <p class="text-sm font-bold text-slate-700 dark:text-slate-300">No Custom Map Linked for "${activeRoute}"</p>
-                        <p class="text-xs text-slate-500 max-w-sm mt-1 font-medium">Attach a Google My Maps embed link when adding or editing routes.</p>
+                    <div class="absolute inset-0 z-0">
+                        <iframe src="${embedFallbackUrl}" class="w-full h-full border-0"></iframe>
+                    </div>
+                    <div class="absolute bottom-4 left-4 right-4 z-10 bg-white/90 dark:bg-slate-950/90 backdrop-blur-md p-3 rounded-2xl border border-slate-200 dark:border-slate-800 text-center shadow-lg">
+                        <p class="text-xs font-bold text-slate-700 dark:text-slate-300">Showing map preview for <span class="text-emerald-600">${activeRoute}</span></p>
+                        <p class="text-[10px] text-slate-500 mt-0.5">Tip: You can link a custom Google My Maps embed link when adding or editing routes.</p>
                     </div>
                 `;
             }
